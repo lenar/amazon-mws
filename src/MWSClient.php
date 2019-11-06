@@ -922,6 +922,26 @@ class MWSClient
         }
     }
 
+	/**
+	 * Returns a list of feed submissions submitted in the previous 90 days that match the query parameters
+	 * @param array $feedSubmissionIdList
+	 * @return array
+	 * @throws Exception
+     * @throws \GuzzleHttp\Exception\GuzzleException
+	 */
+	public function GetFeedSubmissionList($feedSubmissionIdList)
+	{
+		$id = 1;
+		foreach ($feedSubmissionIdList as $feedId) {
+			$query["FeedSubmissionIdList.Id." . $id] = $feedId;
+			$id++;
+		}
+
+		$result = $this->request('GetFeedSubmissionList', $query);
+
+		return $result["GetFeedSubmissionListResult"]["FeedSubmissionInfo"];
+	}
+
     /**
      * Uploads a feed for processing by Amazon MWS.
      * @param string $FeedType (http://docs.developer.amazonservices.com/en_US/feeds/Feeds_FeedType.html)
