@@ -931,6 +931,10 @@ class MWSClient
 	 */
 	public function GetFeedSubmissionList($feedSubmissionIdList)
 	{
+		if (count($feedSubmissionIdList) == 0) {
+			return [];
+		}
+
 		$id = 1;
 		foreach ($feedSubmissionIdList as $feedId) {
 			$query["FeedSubmissionIdList.Id." . $id] = $feedId;
@@ -938,8 +942,13 @@ class MWSClient
 		}
 
 		$result = $this->request('GetFeedSubmissionList', $query);
+		$result = $result["GetFeedSubmissionListResult"]["FeedSubmissionInfo"];
 
-		return $result["GetFeedSubmissionListResult"]["FeedSubmissionInfo"];
+		if ($id == 1) {
+			$result = [$result];
+		}
+
+		return $result;
 	}
 
     /**
