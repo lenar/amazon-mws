@@ -415,11 +415,12 @@ class MWSClient
      * Returns orders updated after and before the dates specified.
      * @param DateTime $lastUpdatedAfter
      * @param DateTime $LastUpdatedBefore
+     * @param array $params
      * @return array
      * @throws Exception
      * @throws \GuzzleHttp\Exception\GuzzleException
      */
-	public function ListOrdersUpdated(DateTime $lastUpdatedAfter, DateTime $lastUpdatedBefore = null)
+	public function ListOrdersUpdated(DateTime $lastUpdatedAfter, DateTime $lastUpdatedBefore = null, array $params = [])
 	{
 		$query = [
 			'LastUpdatedAfter' => gmdate(self::DATE_FORMAT, $lastUpdatedAfter->getTimestamp())
@@ -427,6 +428,10 @@ class MWSClient
 
 		if (!empty($lastUpdatedBefore)) {
 			$query['LastUpdatedBefore'] = gmdate(self::DATE_FORMAT, $lastUpdatedBefore->getTimestamp());
+		}
+
+		foreach ($params as $param => $value) {
+			$query[$param] = $value;
 		}
 
 		$response = $this->request('ListOrders', $query);
