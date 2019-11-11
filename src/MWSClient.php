@@ -1458,7 +1458,8 @@ class MWSClient
 			"MarketplaceId" => empty($marketplaceId) ? $this->config['Marketplace_Id'] : $marketplaceId
 		];
 
-		return $this->request('ListRegisteredDestinations', $query);
+		$response = $this->request('ListRegisteredDestinations', $query);
+		return $response['ListRegisteredDestinationsResult'];
 	}
 
 	/**
