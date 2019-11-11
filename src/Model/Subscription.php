@@ -9,7 +9,7 @@ class Subscription
 	private $destination;
 	private $isEnabled = true;
 
-	public function __construct(string $notificationType, Destination $destination)
+	public function __construct(string $notificationType = "", Destination $destination = null)
 	{
 		$this->notificationType = $notificationType;
 		$this->destination = $destination;
