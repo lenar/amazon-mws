@@ -1446,6 +1446,41 @@ class MWSClient
 		return $this->request('CreateSubscription', $query);
 	}
 
+	/**
+     * Sends a test notification to an existing destination.
+     * @param $marketPlaceId optional
+     * @return array
+     * @throws Exception
+     * @throws \GuzzleHttp\Exception\GuzzleException
+     */
+	public function ListRegisteredDestinations($marketplaceId = "") {
+		$query = [
+			"MarketplaceId" => empty($marketplaceId) ? $this->config['Marketplace_Id'] : $marketplaceId
+		];
+
+		return $this->request('ListRegisteredDestinations', $query);
+	}
+
+	/**
+     * Sends a test notification to an existing destination.
+     * @param MCS\Model\Destination $destination
+     * @return array
+     * @throws Exception
+     * @throws \GuzzleHttp\Exception\GuzzleException
+     */
+	public function SendTestNotificationToDestination(Destination $destination) {
+		$query = [];
+		$query["MarketplaceId"] = $this->config['Marketplace_Id'];
+		$query["Destination.DeliveryChannel"] = $destination->getDeliveryChannel();
+
+		foreach ($destination->getAttributeList() as $id => $attribute) {
+			$query["Destination.AttributeList.member.{$id}.Key"] = $attribute["Key"];
+			$query["Destination.AttributeList.member.{$id}.Value"] = $attribute["Value"];
+		}
+
+		return $this->request('SendTestNotificationToDestination', $query);
+	}
+
     /**
      * Request MWS
      *
