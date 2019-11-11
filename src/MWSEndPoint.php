@@ -7,6 +7,7 @@ use Exception;
 class MWSEndPoint
 {
     const FINANCES_API_PATH = '/Finances/2015-05-01';
+    const SUBSCRIPTIONS_API_PATH = '/Subscriptions/2013-07-01';
 
     public static $endpoints = [
         'ListRecommendations' => [
@@ -171,7 +172,32 @@ class MWSEndPoint
             'action' => 'ListFinancialEventsByNextToken',
             'path' => self::FINANCES_API_PATH,
             'date' => '2015-05-01'
-        ]
+		],
+		/** Subscriptions API section **/
+		'RegisterDestination' => [
+			'method' => 'POST',
+			'action' => 'RegisterDestination',
+			'path' => self::SUBSCRIPTIONS_API_PATH,
+			'date' => '2013-07-01'
+		],
+		'CreateSubscription' => [
+			'method' => 'POST',
+			'action' => 'CreateSubscription',
+			'path' => self::SUBSCRIPTIONS_API_PATH,
+			'date' => '2013-07-01'
+		],
+		'ListRegisteredDestinations' => [
+			'method' => 'POST',
+			'action' => 'ListRegisteredDestinations',
+			'path' => self::SUBSCRIPTIONS_API_PATH,
+			'date' => '2013-07-01'
+		],
+		'SendTestNotificationToDestination' => [
+			'method' => 'POST',
+			'action' => 'SendTestNotificationToDestination',
+			'path' => self::SUBSCRIPTIONS_API_PATH,
+			'date' => '2013-07-01'
+		],
     ];
 
     public static function get($key)

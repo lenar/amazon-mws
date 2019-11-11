@@ -1,6 +1,6 @@
 <?php
 
-namespace MCS;
+namespace MCS\Model;
 
 class AmazonMarketPlaceProduct
 {
@@ -351,7 +351,7 @@ class AmazonMarketPlaceProduct
         }
 
         if (!in_array($this->condition_type, $this->conditions)) {
-            $this->validation_errors['condition_type'] = 'Not one of: ' . implode($this->conditions, ',');
+            $this->validation_errors['condition_type'] = 'Not one of: ' . implode(',', $this->conditions);
         }
 
         if ($this->condition_type != 'New') {

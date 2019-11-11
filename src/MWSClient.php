@@ -9,6 +9,8 @@ use GuzzleHttp\Exception\BadResponseException;
 use League\Csv\CharsetConverter;
 use League\Csv\Reader;
 use League\Csv\Writer;
+use MCS\Model\Destination;
+use MCS\Model\Subscription;
 use Spatie\ArrayToXml\ArrayToXml;
 use SplTempFileObject;
 
@@ -1215,7 +1217,7 @@ class MWSClient
 
     /**
      * Post to create or update a product (_POST_FLAT_FILE_LISTINGS_DATA_)
-     * @param object|array $MWSProduct or array of Custom objects
+     * @param object|array Product or array of Custom objects
      * @param string $template
      * @param null $version
      * @param null $signature
@@ -1233,7 +1235,7 @@ class MWSClient
             'UTF-8' : 'iso-8859-16';
 
         $encoder = (new CharsetConverter())->inputEncoding('UTF-8')->outputEncoding($encoding);
-        $csv = Writer::createFromFileObject(new SplTempFileObject());
+        $csv = Writer::createFromFileObject(new SplTempFileObject(2097152));
         $csv->setDelimiter("\t");
         $csv->addFormatter($encoder);
 
@@ -1248,8 +1250,6 @@ class MWSClient
                 array_values($product->toArray())
             );
         }
-//        $csv->output(date('Y-m-d') . '.csv');
-//        die;
 
         return $this->SubmitFeed('_POST_FLAT_FILE_LISTINGS_DATA_', $csv);
 
@@ -1400,7 +1400,51 @@ class MWSClient
         }
         $array['MaxCount'] = $limit;
         return $this->request('GetReportListByNextToken', $array);
-    }
+	}
+
+	/**
+     * Specifies a new destination where you want to receive notifications.
+     * @param MCS\Model\Destination $destination
+     * @return array
+     * @throws Exception
+     * @throws \GuzzleHttp\Exception\GuzzleException
+     */
+	public function RegisterDestination(Destination $destination)
+	{
+		$query = [];
+		$query["MarketplaceId"] = $this->config['Marketplace_Id'];
+		$query["Destination.DeliveryChannel"] = $destination->getDeliveryChannel();
+
+		foreach ($destination->getAttributeList() as $id => $attribute) {
+			$query["Destination.AttributeList.member.{$id}.Key"] = $attribute["Key"];
+			$query["Destination.AttributeList.member.{$id}.Value"] = $attribute["Value"];
+		}
+
+		return $this->request('RegisterDestination', $query);
+	}
+
+	/**
+     * Creates a new subscription for the specified notification type and destination.
+     * @param MCS\Model\Subscription $subscription
+     * @return array
+     * @throws Exception
+     * @throws \GuzzleHttp\Exception\GuzzleException
+     */
+	public function CreateSubscription(Subscription $subscription)
+	{
+		$query = [];
+		$query["MarketplaceId"] = $this->config['Marketplace_Id'];
+		$query["Subscription.NotificationType"] = $subscription->getNotificationType();
+		$query["Subscription.IsEnabled"] = $subscription->isEnabled();
+		$query["Subscription.Destination.DeliveryChannel"] = $subscription->getDestination()->getDeliveryChannel();
+
+		foreach ($subscription->getDestination()->getAttributeList() as $id => $attribute) {
+			$query["Subscription.Destination.AttributeList.member.{$id}.Key"] = $attribute["Key"];
+			$query["Subscription.Destination.AttributeList.member.{$id}.Value"] = $attribute["Value"];
+		}
+
+		return $this->request('CreateSubscription', $query);
+	}
 
     /**
      * Request MWS
