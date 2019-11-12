@@ -1076,31 +1076,39 @@ class MWSClient
      * @throws Exception
      * @throws \GuzzleHttp\Exception\GuzzleException
      */
-    public function GetReport($ReportId)
+    public function GetReport($ReportId, $requestStatus = true)
     {
-        $status = $this->GetReportRequestStatus($ReportId);
-        if ($status !== false && $status['ReportProcessingStatus'] === '_DONE_NO_DATA_') {
-            return [];
-        } else {
-            if ($status !== false && $status['ReportProcessingStatus'] === '_DONE_') {
-                $result = $this->request('GetReport', [
-                    'ReportId' => $status['GeneratedReportId']
-                ]);
-                if (is_string($result)) {
-                    $reader = Reader::createFromString($result);
-                    $reader->setDelimiter("\t");
-                    $reader->setHeaderOffset(0);
-                    $headers = $reader->getHeader();
-                    $statement = new \League\Csv\Statement;
-                    foreach ($statement->process($reader) as $row) {
-                        $result[] = array_combine($headers, $row);
-                    }
-                }
-                return $result;
-            } else {
-                return false;
-            }
-        }
+		$status = false;
+
+		if ($requestStatus) {
+			$status = $this->GetReportRequestStatus($ReportId);
+			if ($status !== false && $status['ReportProcessingStatus'] === '_DONE_NO_DATA_') {
+				return [];
+			}
+		}
+
+		if (!$requestStatus || ($status !== false && $status['ReportProcessingStatus'] === '_DONE_')) {
+			$result = $this->request('GetReport', [
+				'ReportId' => $requestStatus ? $status['GeneratedReportId'] : $ReportId
+			]);
+			if (is_string($result)) {
+				$content = [];
+
+				$reader = Reader::createFromString($result);
+				$reader->setDelimiter("\t");
+				$reader->setHeaderOffset(0);
+				$headers = $reader->getHeader();
+				$statement = new \League\Csv\Statement;
+				foreach ($statement->process($reader) as $row) {
+					$content[] = array_combine($headers, $row);
+				}
+
+				$result = $content;
+			}
+			return $result;
+		} else {
+			return false;
+		}
     }
 
     /**
