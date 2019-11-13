@@ -1490,6 +1490,21 @@ class MWSClient
 		return $this->request('SendTestNotificationToDestination', $query);
 	}
 
+	/**
+     * Returns the information required to generate an invoice for the shipment of a Fulfillment by Amazon order.
+     * @param string $amazonShipmentId
+     * @return array
+     * @throws Exception
+     * @throws \GuzzleHttp\Exception\GuzzleException
+     */
+	public function GetFBAOutboundShipmentDetail($amazonShipmentId) {
+		$query = [];
+		$query["MarketplaceId"] = $this->config['Marketplace_Id'];
+		$query["AmazonShipmentId"] = $amazonShipmentId;
+
+		return $this->request('GetFBAOutboundShipmentDetail', $query);
+	}
+
     /**
      * Request MWS
      *

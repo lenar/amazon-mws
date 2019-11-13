@@ -8,6 +8,7 @@ class MWSEndPoint
 {
     const FINANCES_API_PATH = '/Finances/2015-05-01';
     const SUBSCRIPTIONS_API_PATH = '/Subscriptions/2013-07-01';
+    const SHIPMENT_INVOICING_PATH = '/ShipmentInvoicing/2018-09-01';
 
     public static $endpoints = [
         'ListRecommendations' => [
@@ -198,6 +199,13 @@ class MWSEndPoint
 			'path' => self::SUBSCRIPTIONS_API_PATH,
 			'date' => '2013-07-01'
 		],
+		/** Shipment Invoincing API section **/
+		'GetFBAOutboundShipmentDetail' => [
+			'method' => 'POST',
+			'action' => 'GetFBAOutboundShipmentDetail',
+			'path' => self::SHIPMENT_INVOICING_PATH,
+			'date' => '2018-09-01'
+		]
     ];
 
     public static function get($key)
