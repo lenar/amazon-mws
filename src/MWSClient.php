@@ -603,7 +603,8 @@ class MWSClient
             'es-ES',
             'fr-FR',
             'it-IT',
-            'en-US'
+			'en-US',
+			'pt-BR'
         ];
         $replace = [
             '</ns2:ItemAttributes>' => '</ItemAttributes>'
@@ -633,44 +634,7 @@ class MWSClient
                         $products = $result['Products']['Product'];
                     }
                     foreach ($products as $product) {
-                        $array = [];
-                        if (isset($product['Identifiers']['MarketplaceASIN']['ASIN'])) {
-                            $array["ASIN"] = $product['Identifiers']['MarketplaceASIN']['ASIN'];
-                        }
-                        foreach ($product['AttributeSets']['ItemAttributes'] as $key => $value) {
-                            if (is_string($key) && is_string($value)) {
-                                $array[$key] = $value;
-                            }
-                        }
-                        if (isset($product['AttributeSets']['ItemAttributes']['Feature'])) {
-                            $array['Feature'] = $product['AttributeSets']['ItemAttributes']['Feature'];
-                        }
-                        if (isset($product['AttributeSets']['ItemAttributes']['PackageDimensions'])) {
-                            $array['PackageDimensions'] = array_map(
-                                'floatval',
-                                $product['AttributeSets']['ItemAttributes']['PackageDimensions']
-                            );
-                        }
-                        if (isset($product['AttributeSets']['ItemAttributes']['ListPrice'])) {
-                            $array['ListPrice'] = $product['AttributeSets']['ItemAttributes']['ListPrice'];
-                        }
-                        if (isset($product['AttributeSets']['ItemAttributes']['SmallImage'])) {
-                            $image = $product['AttributeSets']['ItemAttributes']['SmallImage']['URL'];
-                            $array['medium_image'] = $image;
-                            $array['small_image'] = str_replace('._SL75_', '._SL50_', $image);
-                            $array['large_image'] = str_replace('._SL75_', '', $image);;
-                        }
-                        if (isset($product['Relationships']['VariationParent']['Identifiers']['MarketplaceASIN']['ASIN'])) {
-                            $array['Parentage'] = 'child';
-                            $array['Relationships'] = $product['Relationships']['VariationParent']['Identifiers']['MarketplaceASIN']['ASIN'];
-                        }
-                        if (isset($product['Relationships']['VariationChild'])) {
-                            $array['Parentage'] = 'parent';
-                        }
-                        if (isset($product['SalesRankings']['SalesRank'])) {
-                            $array['SalesRank'] = $product['SalesRankings']['SalesRank'];
-                        }
-                        $found[$asin][] = $array;
+                        $found[$asin][] = $product;
                     }
                 }
             }
