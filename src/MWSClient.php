@@ -906,10 +906,10 @@ class MWSClient
 			return [];
 		}
 
-		$id = 1;
+		$id = 0;
 		foreach ($feedSubmissionIdList as $feedId) {
-			$query["FeedSubmissionIdList.Id." . $id] = $feedId;
 			$id++;
+			$query["FeedSubmissionIdList.Id." . $id] = $feedId;
 		}
 
 		$result = $this->request('GetFeedSubmissionList', $query);
