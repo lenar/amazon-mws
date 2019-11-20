@@ -1466,7 +1466,9 @@ class MWSClient
 		$query["MarketplaceId"] = $this->config['Marketplace_Id'];
 		$query["AmazonShipmentId"] = $amazonShipmentId;
 
-		return $this->request('GetFBAOutboundShipmentDetail', $query);
+		$response = $this->request('GetFBAOutboundShipmentDetail', $query);
+
+		return $response["GetFBAOutboundShipmentDetailResult"]["ShipmentDetail"];
 	}
 
     /**
