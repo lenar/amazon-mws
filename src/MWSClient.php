@@ -1419,7 +1419,7 @@ class MWSClient
 	}
 
 	/**
-     * Sends a test notification to an existing destination.
+     * Lists all current destinations that you have registered.
      * @param $marketPlaceId optional
      * @return array
      * @throws Exception
@@ -1432,6 +1432,22 @@ class MWSClient
 
 		$response = $this->request('ListRegisteredDestinations', $query);
 		return $response['ListRegisteredDestinationsResult'];
+	}
+
+	/**
+     * Returns a list of all your current subscriptions.
+     * @param $marketPlaceId optional
+     * @return array
+     * @throws Exception
+     * @throws \GuzzleHttp\Exception\GuzzleException
+     */
+	public function ListSubscriptions($marketplaceId = "") {
+		$query = [
+			"MarketplaceId" => empty($marketplaceId) ? $this->config['Marketplace_Id'] : $marketplaceId
+		];
+
+		$response = $this->request('ListSubscriptions', $query);
+		return $response['ListSubscriptionsResult'];
 	}
 
 	/**
