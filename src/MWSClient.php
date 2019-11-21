@@ -1469,7 +1469,12 @@ class MWSClient
 		];
 
 		$response = $this->request('ListSubscriptions', $query);
-		return $response['ListSubscriptionsResult'];
+
+		if (isset($response['ListSubscriptionsResult']["SubscriptionList"]["member"]["Destination"])) {
+			return [$response['ListSubscriptionsResult']["SubscriptionList"]["member"]];
+		} else {
+			return $response['ListSubscriptionsResult']["SubscriptionList"]["member"];
+		}
 	}
 
 	/**
