@@ -1419,6 +1419,28 @@ class MWSClient
 	}
 
 	/**
+     * Deletes the subscription for the specified notification type and destination.
+     * @param MCS\Model\Subscription $subscription
+     * @return array
+     * @throws Exception
+     * @throws \GuzzleHttp\Exception\GuzzleException
+     */
+	public function DeleteSubscription(Subscription $subscription)
+	{
+		$query = [];
+		$query["MarketplaceId"] = $this->config['Marketplace_Id'];
+		$query["NotificationType"] = $subscription->getNotificationType();
+		$query["Destination.DeliveryChannel"] = $subscription->getDestination()->getDeliveryChannel();
+
+		foreach ($subscription->getDestination()->getAttributeList() as $id => $attribute) {
+			$query["Destination.AttributeList.member.{$id}.Key"] = $attribute["Key"];
+			$query["Destination.AttributeList.member.{$id}.Value"] = $attribute["Value"];
+		}
+
+		return $this->request('DeleteSubscription', $query);
+	}
+
+	/**
      * Lists all current destinations that you have registered.
      * @param $marketPlaceId optional
      * @return array
