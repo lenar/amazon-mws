@@ -785,48 +785,61 @@ class MWSClient
      */
     public function updateStock(array $array)
     {
-        $feed = [
-            'MessageType' => 'Inventory',
-            'Message' => []
-        ];
-        foreach ($array as $sku => $quantity) {
-            $feed['Message'][] = [
-                'MessageID' => rand(),
-                'OperationType' => 'Update',
-                'Inventory' => [
-                    'SKU' => $sku,
-                    'Quantity' => (int)$quantity
-                ]
-            ];
-        }
-        return $this->SubmitFeed('_POST_INVENTORY_AVAILABILITY_DATA_', $feed);
-    }
+		$messages = [];
 
-    /**
+		foreach ($array as $sku => $quantity) {
+			$messages[] = ["sku" => $sku, "quantity" => $quantity];
+		}
+
+        return $this->postInventoryAvailability($messages);
+	}
+
+	/**
      * Update a product's stock quantity
-     *
-     * @param array $array array containing arrays with next keys: [sku, quantity, latency]
+     * @param array $array array containing sku as key and quantity as value
      * @return array feed submission result
      * @throws Exception
      * @throws \GuzzleHttp\Exception\GuzzleException
      */
-    public function updateStockWithFulfillmentLatency(array $array)
+    public function postInventoryAvailability(array $array)
     {
         $feed = [
             'MessageType' => 'Inventory',
             'Message' => []
-        ];
+		];
+
         foreach ($array as $item) {
-            $feed['Message'][] = [
+            $message = [
                 'MessageID' => rand(),
                 'OperationType' => 'Update',
                 'Inventory' => [
-                    'SKU' => $item['sku'],
-                    'Quantity' => (int)$item['quantity'],
-                    'FulfillmentLatency' => $item['latency']
+                    'SKU' => $item['sku']
                 ]
-            ];
-        }
+			];
+
+			if (!empty($item['quantity'])) {
+				$message['Inventory']['Quantity'] = (int) $item['quantity'];
+			}
+
+			if (!empty($item['latency'])) {
+				$message['Inventory']['FulfillmentLatency'] = $item['latency'];
+			}
+
+			if (!empty($item['fulfillmentCenterID'])) {
+				$message['Inventory']['FulfillmentCenterID'] = $item['fulfillmentCenterID'];
+			}
+
+			if (!empty($item['lookup'])) {
+				$message['Inventory']['Lookup'] = $item['lookup'];
+			}
+
+			if (!empty($item['switchFulfillmentTo'])) {
+				$message['Inventory']['SwitchFulfillmentTo'] = $item['switchFulfillmentTo'];
+			}
+
+            $feed['Message'][] = $message;
+		}
+
         return $this->SubmitFeed('_POST_INVENTORY_AVAILABILITY_DATA_', $feed);
     }
 
@@ -872,7 +885,6 @@ class MWSClient
         }
         return $this->SubmitFeed('_POST_PRODUCT_PRICING_DATA_', $feed);
     }
-
 
     /**
      * Returns the feed processing report and the Content-MD5 header.

@@ -213,19 +213,6 @@ $info = $client->GetFeedSubmissionResult($result['FeedSubmissionId']);
 print_r($info);
 ```
 
-### Update product stock with fulfillment latency specified
-
-```php
-$result = $client->updateStockWithFulfillmentLatency([
-    ['sku' => 'sku1', 'quantity' => 20, 'latency' => 1],
-    ['sku' => 'sku2', 'quantity' => 20, 'latency' => 1],
-]);
-print_r($result);
-
-$info = $client->GetFeedSubmissionResult($result['FeedSubmissionId']);
-print_r($info);
-```
-
 ### Update product pricing
 
 ```php
