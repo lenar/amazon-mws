@@ -809,8 +809,10 @@ class MWSClient
 		];
 
         foreach ($array as $item) {
+			$messageID = isset($item["messageID"]) ? $item["messageID"] : rand();
+
             $message = [
-                'MessageID' => rand(),
+                'MessageID' => $messageID,
                 'OperationType' => 'Update',
                 'Inventory' => [
                     'SKU' => $item['sku']
