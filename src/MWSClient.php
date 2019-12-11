@@ -819,6 +819,10 @@ class MWSClient
                 ]
 			];
 
+			if (!empty($item['available'])) {
+				$message['Inventory']['Available'] = $item['available'];
+			}
+
 			if (!empty($item['quantity'])) {
 				$message['Inventory']['Quantity'] = (int) $item['quantity'];
 			}
