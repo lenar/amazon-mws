@@ -217,6 +217,12 @@ class MWSEndPoint
 			'action' => 'GetFBAOutboundShipmentDetail',
 			'path' => self::SHIPMENT_INVOICING_PATH,
 			'date' => '2018-09-01'
+		],
+		'SubmitFBAOutboundShipmentInvoice' => [
+			'method' => 'POST',
+			'action' => 'SubmitFBAOutboundShipmentInvoice',
+			'path' => self::SHIPMENT_INVOICING_PATH,
+			'date' => '2018-09-01'
 		]
     ];
 

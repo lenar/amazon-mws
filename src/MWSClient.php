@@ -1532,6 +1532,34 @@ class MWSClient
 		return $response["GetFBAOutboundShipmentDetailResult"]["ShipmentDetail"];
 	}
 
+	/**
+     * Submits shipment invoice data for a given shipment.
+     * @param string $amazonShipmentId
+     * @param string $invoiceContent
+     * @return array
+     * @throws Exception
+     * @throws \GuzzleHttp\Exception\GuzzleException
+     */
+	public function submitFBAOutboundShipmentInvoice($amazonShipmentId, $invoiceContent)
+    {
+        if (is_array($invoiceContent)) {
+            $invoiceContent = $this->arrayToXml($invoiceContent);
+        }
+
+        $query = [
+			'MarketplaceId' => $this->config["Marketplace_Id"],
+			"AmazonShipmentId" => $amazonShipmentId,
+			"SellerId" => $this->config['Seller_Id'],
+			"ContentMD5Value" => base64_encode(md5($invoiceContent, true))
+		];
+
+        return $this->request(
+            'SubmitFBAOutboundShipmentInvoice',
+            $query,
+            $invoiceContent
+        );
+    }
+
     /**
      * Request MWS
      *
@@ -1574,7 +1602,7 @@ class MWSClient
                 'Accept' => 'application/xml',
                 'x-amazon-user-agent' => $this->config['Application_Name'] . '/' . $this->config['Application_Version']
             ];
-            if ($endPoint['action'] === 'SubmitFeed') {
+            if (in_array($endPoint['action'], ['SubmitFeed', 'SubmitFBAOutboundShipmentInvoice'])) {
                 $headers['Content-MD5'] = base64_encode(md5($body, true));
                 if (in_array($this->config['Marketplace_Id'], ['AAHKV2X7AFYLW', 'A1VC38T7YXB528'])) {
                     $headers['Content-Type'] = 'text/xml; charset=UTF-8';
@@ -1582,11 +1610,14 @@ class MWSClient
                     $headers['Content-Type'] = 'text/xml; charset=iso-8859-16';
                 }
 
-                $headers['Host'] = $this->config['Region_Host'];
-                unset(
-                    $query['MarketplaceId.Id.1'],
-                    $query['SellerId']
-                );
+				$headers['Host'] = $this->config['Region_Host'];
+
+				if ($endPoint['action'] === 'SubmitFeed') {
+					unset(
+						$query['MarketplaceId.Id.1'],
+						$query['SellerId']
+					);
+				}
             }
             $requestOptions = [
                 'headers' => $headers,
