@@ -1558,7 +1558,33 @@ class MWSClient
             $query,
             $invoiceContent
         );
-    }
+	}
+
+	/**
+     * Gets the invoice processing status for the shipments that you specify.
+     * @param array $amazonShipmentId
+     * @return array
+     * @throws Exception
+     * @throws \GuzzleHttp\Exception\GuzzleException
+     */
+	public function getFBAOutboundShipmentInvoiceStatus(array $amazonShipmentIds)
+	{
+		if (count($amazonShipmentIds) == 0) {
+			return;
+		}
+
+		$query = [];
+		$query['MarketplaceId'] = $this->config["Marketplace_Id"];
+		$query['SellerId'] = $this->config['Seller_Id'];
+
+		foreach ($amazonShipmentIds as $id => $amazonShipmentId) {
+			$query["AmazonShipmentId.Id." . ($id + 1)] = $amazonShipmentId;
+		}
+
+		$response = $this->request('GetFBAOutboundShipmentInvoiceStatus', $query);
+
+		return $response["GetFBAOutboundShipmentInvoiceStatusResult"];
+	}
 
     /**
      * Request MWS
