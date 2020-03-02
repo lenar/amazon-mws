@@ -823,7 +823,7 @@ class MWSClient
 				$message['Inventory']['Available'] = $item['available'];
 			}
 
-			if (!empty($item['quantity'])) {
+			if (isset($item['quantity'])) {
 				$message['Inventory']['Quantity'] = (int) $item['quantity'];
 			}
 
