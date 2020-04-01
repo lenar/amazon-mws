@@ -41,7 +41,13 @@ class MWSClient
         'A1VC38T7YXB528' => 'mws.amazonservices.jp',
         'AAHKV2X7AFYLW' => 'mws.amazonservices.com.cn',
         'A39IBJ37TRP1C6' => 'mws.amazonservices.com.au',
-        'A2Q3Y263D00KWC' => 'mws.amazonservices.com'
+        'A2Q3Y263D00KWC' => 'mws.amazonservices.com',
+        'A1805IZSGTT6HS' => 'mws-eu.amazonservices.com',
+        'ARBP9OOSHTCHU' => 'mws-eu.amazonservices.com',
+        'A17E79C6D8DWNP' => 'mws.amazonservices.com',
+        'A33AVAJ2PDY3EV' => 'mws.amazonservices.com',
+        'A19VAU5U5O7RUS' => 'mws-fe.amazonservices.com',
+        'A2VIGQ35RCS4UG' => 'mws.amazonservices.ae'
     ];
     protected $debugNextFeed = false;
     protected $client = null;
@@ -90,7 +96,7 @@ class MWSClient
         try {
             $this->ListOrderItems('validate');
         } catch (Exception $e) {
-            if ($e->getMessage() == 'Invalid AmazonOrderId: validate') {
+            if ($e->getMessage() == 'Invalid AmazonOrderId: validate' || $e->getMessage() == 'The order id you have requested is not valid.') {
                 return true;
             } else {
                 return false;
