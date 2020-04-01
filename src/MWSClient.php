@@ -9,6 +9,8 @@ use GuzzleHttp\Exception\BadResponseException;
 use League\Csv\CharsetConverter;
 use League\Csv\Reader;
 use League\Csv\Writer;
+use MCS\Model\Destination;
+use MCS\Model\Subscription;
 use Spatie\ArrayToXml\ArrayToXml;
 use SplTempFileObject;
 
@@ -415,6 +417,50 @@ class MWSClient
         } else {
             return [];
         }
+	}
+
+	/**
+     * Returns orders updated after and before the dates specified.
+     * @param DateTime $lastUpdatedAfter
+     * @param DateTime $LastUpdatedBefore
+     * @param array $params
+     * @return array
+     * @throws Exception
+     * @throws \GuzzleHttp\Exception\GuzzleException
+     */
+	public function ListOrdersUpdated(DateTime $lastUpdatedAfter, DateTime $lastUpdatedBefore = null, array $params = [])
+	{
+		$query = [
+			'LastUpdatedAfter' => gmdate(self::DATE_FORMAT, $lastUpdatedAfter->getTimestamp())
+		];
+
+		if (!empty($lastUpdatedBefore)) {
+			$query['LastUpdatedBefore'] = gmdate(self::DATE_FORMAT, $lastUpdatedBefore->getTimestamp());
+		}
+
+		foreach ($params as $param => $value) {
+			$query[$param] = $value;
+		}
+
+		$response = $this->request('ListOrders', $query);
+
+		if (isset($response['ListOrdersResult']['Orders']['Order'])) {
+			if (isset($response['ListOrdersResult']['NextToken'])) {
+				$data['ListOrders'] = $response['ListOrdersResult']['Orders']['Order'];
+				$data['NextToken'] = $response['ListOrdersResult']['NextToken'];
+				return $data;
+			}
+
+			$response = $response['ListOrdersResult']['Orders']['Order'];
+
+			if (array_keys($response) !== range(0, count($response) - 1)) {
+				return [$response];
+			}
+
+			return $response;
+		} else {
+			return [];
+		}
     }
 
     /**
@@ -563,7 +609,8 @@ class MWSClient
             'es-ES',
             'fr-FR',
             'it-IT',
-            'en-US'
+			'en-US',
+			'pt-BR'
         ];
         $replace = [
             '</ns2:ItemAttributes>' => '</ItemAttributes>'
@@ -593,44 +640,7 @@ class MWSClient
                         $products = $result['Products']['Product'];
                     }
                     foreach ($products as $product) {
-                        $array = [];
-                        if (isset($product['Identifiers']['MarketplaceASIN']['ASIN'])) {
-                            $array["ASIN"] = $product['Identifiers']['MarketplaceASIN']['ASIN'];
-                        }
-                        foreach ($product['AttributeSets']['ItemAttributes'] as $key => $value) {
-                            if (is_string($key) && is_string($value)) {
-                                $array[$key] = $value;
-                            }
-                        }
-                        if (isset($product['AttributeSets']['ItemAttributes']['Feature'])) {
-                            $array['Feature'] = $product['AttributeSets']['ItemAttributes']['Feature'];
-                        }
-                        if (isset($product['AttributeSets']['ItemAttributes']['PackageDimensions'])) {
-                            $array['PackageDimensions'] = array_map(
-                                'floatval',
-                                $product['AttributeSets']['ItemAttributes']['PackageDimensions']
-                            );
-                        }
-                        if (isset($product['AttributeSets']['ItemAttributes']['ListPrice'])) {
-                            $array['ListPrice'] = $product['AttributeSets']['ItemAttributes']['ListPrice'];
-                        }
-                        if (isset($product['AttributeSets']['ItemAttributes']['SmallImage'])) {
-                            $image = $product['AttributeSets']['ItemAttributes']['SmallImage']['URL'];
-                            $array['medium_image'] = $image;
-                            $array['small_image'] = str_replace('._SL75_', '._SL50_', $image);
-                            $array['large_image'] = str_replace('._SL75_', '', $image);;
-                        }
-                        if (isset($product['Relationships']['VariationParent']['Identifiers']['MarketplaceASIN']['ASIN'])) {
-                            $array['Parentage'] = 'child';
-                            $array['Relationships'] = $product['Relationships']['VariationParent']['Identifiers']['MarketplaceASIN']['ASIN'];
-                        }
-                        if (isset($product['Relationships']['VariationChild'])) {
-                            $array['Parentage'] = 'parent';
-                        }
-                        if (isset($product['SalesRankings']['SalesRank'])) {
-                            $array['SalesRank'] = $product['SalesRankings']['SalesRank'];
-                        }
-                        $found[$asin][] = $array;
+                        $found[$asin][] = $product;
                     }
                 }
             }
@@ -781,48 +791,67 @@ class MWSClient
      */
     public function updateStock(array $array)
     {
-        $feed = [
-            'MessageType' => 'Inventory',
-            'Message' => []
-        ];
-        foreach ($array as $sku => $quantity) {
-            $feed['Message'][] = [
-                'MessageID' => rand(),
-                'OperationType' => 'Update',
-                'Inventory' => [
-                    'SKU' => $sku,
-                    'Quantity' => (int)$quantity
-                ]
-            ];
-        }
-        return $this->SubmitFeed('_POST_INVENTORY_AVAILABILITY_DATA_', $feed);
-    }
+		$messages = [];
 
-    /**
+		foreach ($array as $sku => $quantity) {
+			$messages[] = ["sku" => $sku, "quantity" => $quantity];
+		}
+
+        return $this->postInventoryAvailability($messages);
+	}
+
+	/**
      * Update a product's stock quantity
-     *
-     * @param array $array array containing arrays with next keys: [sku, quantity, latency]
+     * @param array $array array containing sku as key and quantity as value
      * @return array feed submission result
      * @throws Exception
      * @throws \GuzzleHttp\Exception\GuzzleException
      */
-    public function updateStockWithFulfillmentLatency(array $array)
+    public function postInventoryAvailability(array $array)
     {
         $feed = [
             'MessageType' => 'Inventory',
             'Message' => []
-        ];
+		];
+
         foreach ($array as $item) {
-            $feed['Message'][] = [
-                'MessageID' => rand(),
+			$messageID = isset($item["messageID"]) ? $item["messageID"] : rand();
+
+            $message = [
+                'MessageID' => $messageID,
                 'OperationType' => 'Update',
                 'Inventory' => [
-                    'SKU' => $item['sku'],
-                    'Quantity' => (int)$item['quantity'],
-                    'FulfillmentLatency' => $item['latency']
+                    'SKU' => $item['sku']
                 ]
-            ];
-        }
+			];
+
+			if (!empty($item['available'])) {
+				$message['Inventory']['Available'] = $item['available'];
+			}
+
+			if (isset($item['quantity'])) {
+				$message['Inventory']['Quantity'] = (int) $item['quantity'];
+			}
+
+			if (!empty($item['latency'])) {
+				$message['Inventory']['FulfillmentLatency'] = $item['latency'];
+			}
+
+			if (!empty($item['fulfillmentCenterID'])) {
+				$message['Inventory']['FulfillmentCenterID'] = $item['fulfillmentCenterID'];
+			}
+
+			if (!empty($item['lookup'])) {
+				$message['Inventory']['Lookup'] = $item['lookup'];
+			}
+
+			if (!empty($item['switchFulfillmentTo'])) {
+				$message['Inventory']['SwitchFulfillmentTo'] = $item['switchFulfillmentTo'];
+			}
+
+            $feed['Message'][] = $message;
+		}
+
         return $this->SubmitFeed('_POST_INVENTORY_AVAILABILITY_DATA_', $feed);
     }
 
@@ -869,7 +898,6 @@ class MWSClient
         return $this->SubmitFeed('_POST_PRODUCT_PRICING_DATA_', $feed);
     }
 
-
     /**
      * Returns the feed processing report and the Content-MD5 header.
      * @param string $FeedSubmissionId
@@ -888,6 +916,35 @@ class MWSClient
             return $result;
         }
     }
+
+	/**
+	 * Returns a list of feed submissions submitted in the previous 90 days that match the query parameters
+	 * @param array $feedSubmissionIdList
+	 * @return array
+	 * @throws Exception
+     * @throws \GuzzleHttp\Exception\GuzzleException
+	 */
+	public function GetFeedSubmissionList($feedSubmissionIdList)
+	{
+		if (count($feedSubmissionIdList) == 0) {
+			return [];
+		}
+
+		$id = 0;
+		foreach ($feedSubmissionIdList as $feedId) {
+			$id++;
+			$query["FeedSubmissionIdList.Id." . $id] = $feedId;
+		}
+
+		$result = $this->request('GetFeedSubmissionList', $query);
+		$result = $result["GetFeedSubmissionListResult"]["FeedSubmissionInfo"];
+
+		if ($id == 1) {
+			$result = [$result];
+		}
+
+		return $result;
+	}
 
     /**
      * Uploads a feed for processing by Amazon MWS.
@@ -1007,32 +1064,39 @@ class MWSClient
      * @throws Exception
      * @throws \GuzzleHttp\Exception\GuzzleException
      */
-    public function GetReport($ReportId)
+    public function GetReport($ReportId, $requestStatus = true)
     {
-        $status = $this->GetReportRequestStatus($ReportId);
-        if ($status !== false && $status['ReportProcessingStatus'] === '_DONE_NO_DATA_') {
-            return [];
-        } else {
-            if ($status !== false && $status['ReportProcessingStatus'] === '_DONE_') {
-                $result = $this->request('GetReport', [
-                    'ReportId' => $status['GeneratedReportId']
-                ]);
-                if (is_string($result)) {
-                    $reader = Reader::createFromString($result);
-                    $reader->setDelimiter("\t");
-                    $reader->setHeaderOffset(0);
-                    $headers = $reader->getHeader();
-                    $statement = new \League\Csv\Statement;
-                    $result = array();
-                    foreach ($statement->process($reader) as $row) {
-                        $result[] = array_combine($headers, $row);
-                    }
-                }
-                return $result;
-            } else {
-                return false;
-            }
-        }
+		$status = false;
+
+		if ($requestStatus) {
+			$status = $this->GetReportRequestStatus($ReportId);
+			if ($status !== false && $status['ReportProcessingStatus'] === '_DONE_NO_DATA_') {
+				return [];
+			}
+		}
+
+		if (!$requestStatus || ($status !== false && $status['ReportProcessingStatus'] === '_DONE_')) {
+			$result = $this->request('GetReport', [
+				'ReportId' => $requestStatus ? $status['GeneratedReportId'] : $ReportId
+			]);
+			if (is_string($result)) {
+				$content = [];
+
+				$reader = Reader::createFromString($result);
+				$reader->setDelimiter("\t");
+				$reader->setHeaderOffset(0);
+				$headers = $reader->getHeader();
+				$statement = new \League\Csv\Statement;
+				foreach ($statement->process($reader) as $row) {
+					$content[] = array_combine($headers, $row);
+				}
+
+				$result = $content;
+			}
+			return $result;
+		} else {
+			return false;
+		}
     }
 
     /**
@@ -1149,7 +1213,7 @@ class MWSClient
 
     /**
      * Post to create or update a product (_POST_FLAT_FILE_LISTINGS_DATA_)
-     * @param object|array $MWSProduct or array of Custom objects
+     * @param object|array Product or array of Custom objects
      * @param string $template
      * @param null $version
      * @param null $signature
@@ -1167,7 +1231,7 @@ class MWSClient
             'UTF-8' : 'iso-8859-16';
 
         $encoder = (new CharsetConverter())->inputEncoding('UTF-8')->outputEncoding($encoding);
-        $csv = Writer::createFromFileObject(new SplTempFileObject());
+        $csv = Writer::createFromFileObject(new SplTempFileObject(2097152));
         $csv->setDelimiter("\t");
         $csv->addFormatter($encoder);
 
@@ -1182,8 +1246,6 @@ class MWSClient
                 array_values($product->toArray())
             );
         }
-//        $csv->output(date('Y-m-d') . '.csv');
-//        die;
 
         return $this->SubmitFeed('_POST_FLAT_FILE_LISTINGS_DATA_', $csv);
 
@@ -1334,7 +1396,201 @@ class MWSClient
         }
         $array['MaxCount'] = $limit;
         return $this->request('GetReportListByNextToken', $array);
-    }
+	}
+
+	/**
+     * Specifies a new destination where you want to receive notifications.
+     * @param MCS\Model\Destination $destination
+     * @return array
+     * @throws Exception
+     * @throws \GuzzleHttp\Exception\GuzzleException
+     */
+	public function RegisterDestination(Destination $destination)
+	{
+		$query = [];
+		$query["MarketplaceId"] = $this->config['Marketplace_Id'];
+		$query["Destination.DeliveryChannel"] = $destination->getDeliveryChannel();
+
+		foreach ($destination->getAttributeList() as $id => $attribute) {
+			$query["Destination.AttributeList.member.{$id}.Key"] = $attribute["Key"];
+			$query["Destination.AttributeList.member.{$id}.Value"] = $attribute["Value"];
+		}
+
+		return $this->request('RegisterDestination', $query);
+	}
+
+	/**
+     * Creates a new subscription for the specified notification type and destination.
+     * @param MCS\Model\Subscription $subscription
+     * @return array
+     * @throws Exception
+     * @throws \GuzzleHttp\Exception\GuzzleException
+     */
+	public function CreateSubscription(Subscription $subscription)
+	{
+		$query = [];
+		$query["MarketplaceId"] = $this->config['Marketplace_Id'];
+		$query["Subscription.NotificationType"] = $subscription->getNotificationType();
+		$query["Subscription.IsEnabled"] = $subscription->isEnabled();
+		$query["Subscription.Destination.DeliveryChannel"] = $subscription->getDestination()->getDeliveryChannel();
+
+		foreach ($subscription->getDestination()->getAttributeList() as $id => $attribute) {
+			$query["Subscription.Destination.AttributeList.member.{$id}.Key"] = $attribute["Key"];
+			$query["Subscription.Destination.AttributeList.member.{$id}.Value"] = $attribute["Value"];
+		}
+
+		return $this->request('CreateSubscription', $query);
+	}
+
+	/**
+     * Deletes the subscription for the specified notification type and destination.
+     * @param MCS\Model\Subscription $subscription
+     * @return array
+     * @throws Exception
+     * @throws \GuzzleHttp\Exception\GuzzleException
+     */
+	public function DeleteSubscription(Subscription $subscription)
+	{
+		$query = [];
+		$query["MarketplaceId"] = $this->config['Marketplace_Id'];
+		$query["NotificationType"] = $subscription->getNotificationType();
+		$query["Destination.DeliveryChannel"] = $subscription->getDestination()->getDeliveryChannel();
+
+		foreach ($subscription->getDestination()->getAttributeList() as $id => $attribute) {
+			$query["Destination.AttributeList.member.{$id}.Key"] = $attribute["Key"];
+			$query["Destination.AttributeList.member.{$id}.Value"] = $attribute["Value"];
+		}
+
+		return $this->request('DeleteSubscription', $query);
+	}
+
+	/**
+     * Lists all current destinations that you have registered.
+     * @param $marketPlaceId optional
+     * @return array
+     * @throws Exception
+     * @throws \GuzzleHttp\Exception\GuzzleException
+     */
+	public function ListRegisteredDestinations($marketplaceId = "") {
+		$query = [
+			"MarketplaceId" => empty($marketplaceId) ? $this->config['Marketplace_Id'] : $marketplaceId
+		];
+
+		$response = $this->request('ListRegisteredDestinations', $query);
+		return $response['ListRegisteredDestinationsResult'];
+	}
+
+	/**
+     * Returns a list of all your current subscriptions.
+     * @param $marketPlaceId optional
+     * @return array
+     * @throws Exception
+     * @throws \GuzzleHttp\Exception\GuzzleException
+     */
+	public function ListSubscriptions($marketplaceId = "") {
+		$query = [
+			"MarketplaceId" => empty($marketplaceId) ? $this->config['Marketplace_Id'] : $marketplaceId
+		];
+
+		$response = $this->request('ListSubscriptions', $query);
+
+		if (isset($response['ListSubscriptionsResult']["SubscriptionList"]["member"]["Destination"])) {
+			return [$response['ListSubscriptionsResult']["SubscriptionList"]["member"]];
+		} else {
+			return $response['ListSubscriptionsResult']["SubscriptionList"]["member"];
+		}
+	}
+
+	/**
+     * Sends a test notification to an existing destination.
+     * @param MCS\Model\Destination $destination
+     * @return array
+     * @throws Exception
+     * @throws \GuzzleHttp\Exception\GuzzleException
+     */
+	public function SendTestNotificationToDestination(Destination $destination) {
+		$query = [];
+		$query["MarketplaceId"] = $this->config['Marketplace_Id'];
+		$query["Destination.DeliveryChannel"] = $destination->getDeliveryChannel();
+
+		foreach ($destination->getAttributeList() as $id => $attribute) {
+			$query["Destination.AttributeList.member.{$id}.Key"] = $attribute["Key"];
+			$query["Destination.AttributeList.member.{$id}.Value"] = $attribute["Value"];
+		}
+
+		return $this->request('SendTestNotificationToDestination', $query);
+	}
+
+	/**
+     * Returns the information required to generate an invoice for the shipment of a Fulfillment by Amazon order.
+     * @param string $amazonShipmentId
+     * @return array
+     * @throws Exception
+     * @throws \GuzzleHttp\Exception\GuzzleException
+     */
+	public function GetFBAOutboundShipmentDetail($amazonShipmentId) {
+		$query = [];
+		$query["MarketplaceId"] = $this->config['Marketplace_Id'];
+		$query["AmazonShipmentId"] = $amazonShipmentId;
+
+		$response = $this->request('GetFBAOutboundShipmentDetail', $query);
+
+		return $response["GetFBAOutboundShipmentDetailResult"]["ShipmentDetail"];
+	}
+
+	/**
+     * Submits shipment invoice data for a given shipment.
+     * @param string $amazonShipmentId
+     * @param string $invoiceContent
+     * @return array
+     * @throws Exception
+     * @throws \GuzzleHttp\Exception\GuzzleException
+     */
+	public function submitFBAOutboundShipmentInvoice($amazonShipmentId, $invoiceContent)
+    {
+        if (is_array($invoiceContent)) {
+            $invoiceContent = $this->arrayToXml($invoiceContent);
+        }
+
+        $query = [
+			'MarketplaceId' => $this->config["Marketplace_Id"],
+			"AmazonShipmentId" => $amazonShipmentId,
+			"SellerId" => $this->config['Seller_Id'],
+			"ContentMD5Value" => base64_encode(md5($invoiceContent, true))
+		];
+
+        return $this->request(
+            'SubmitFBAOutboundShipmentInvoice',
+            $query,
+            $invoiceContent
+        );
+	}
+
+	/**
+     * Gets the invoice processing status for the shipments that you specify.
+     * @param array $amazonShipmentId
+     * @return array
+     * @throws Exception
+     * @throws \GuzzleHttp\Exception\GuzzleException
+     */
+	public function getFBAOutboundShipmentInvoiceStatus(array $amazonShipmentIds)
+	{
+		if (count($amazonShipmentIds) == 0) {
+			return;
+		}
+
+		$query = [];
+		$query['MarketplaceId'] = $this->config["Marketplace_Id"];
+		$query['SellerId'] = $this->config['Seller_Id'];
+
+		foreach ($amazonShipmentIds as $id => $amazonShipmentId) {
+			$query["AmazonShipmentId.Id." . ($id + 1)] = $amazonShipmentId;
+		}
+
+		$response = $this->request('GetFBAOutboundShipmentInvoiceStatus', $query);
+
+		return $response["GetFBAOutboundShipmentInvoiceStatusResult"];
+	}
 
     /**
      * Request MWS
@@ -1378,7 +1634,7 @@ class MWSClient
                 'Accept' => 'application/xml',
                 'x-amazon-user-agent' => $this->config['Application_Name'] . '/' . $this->config['Application_Version']
             ];
-            if ($endPoint['action'] === 'SubmitFeed') {
+            if (in_array($endPoint['action'], ['SubmitFeed', 'SubmitFBAOutboundShipmentInvoice'])) {
                 $headers['Content-MD5'] = base64_encode(md5($body, true));
                 if (in_array($this->config['Marketplace_Id'], ['AAHKV2X7AFYLW', 'A1VC38T7YXB528'])) {
                     $headers['Content-Type'] = 'text/xml; charset=UTF-8';
@@ -1386,11 +1642,14 @@ class MWSClient
                     $headers['Content-Type'] = 'text/xml; charset=iso-8859-16';
                 }
 
-                $headers['Host'] = $this->config['Region_Host'];
-                unset(
-                    $query['MarketplaceId.Id.1'],
-                    $query['SellerId']
-                );
+				$headers['Host'] = $this->config['Region_Host'];
+
+				if ($endPoint['action'] === 'SubmitFeed') {
+					unset(
+						$query['MarketplaceId.Id.1'],
+						$query['SellerId']
+					);
+				}
             }
             $requestOptions = [
                 'headers' => $headers,

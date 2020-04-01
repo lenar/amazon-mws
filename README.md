@@ -20,7 +20,7 @@ Interaction with the Amazon Api for vendors called MWS
     {
         "name": "mcs/amazon-mws",
         "type": "git",
-        "url": "git@github.com:forecho/amazon-mws.git"
+        "url": "git@github.com:tiny-software/amazon-mws.git"
     }
 ]
 ```
@@ -213,19 +213,6 @@ $info = $client->GetFeedSubmissionResult($result['FeedSubmissionId']);
 print_r($info);
 ```
 
-### Update product stock with fulfillment latency specified
-
-```php
-$result = $client->updateStockWithFulfillmentLatency([
-    ['sku' => 'sku1', 'quantity' => 20, 'latency' => 1],
-    ['sku' => 'sku2', 'quantity' => 20, 'latency' => 1],
-]);
-print_r($result);
-
-$info = $client->GetFeedSubmissionResult($result['FeedSubmissionId']);
-print_r($info);
-```
-
 ### Update product pricing
 
 ```php
@@ -308,6 +295,9 @@ $client->ListOrderItems($AmazonOrderId);
 
 // Returns orders created or updated during a time frame that you specify.
 $client->ListOrders($from, $allMarketplaces = false, $states = ['Unshipped', 'PartiallyShipped'], $FulfillmentChannel = 'MFN');
+
+// Returns orders updated during a time frame that you specify.
+$client->ListOrdersUpdated($lastUpdatedAfter, $lastUpdatedBefore);
 
 // Returns your active recommendations for a specific category or for all categories for a specific marketplace.
 $client->ListRecommendations($RecommendationCategory = null);

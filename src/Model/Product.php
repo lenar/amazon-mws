@@ -1,8 +1,8 @@
 <?php
 
-namespace MCS;
+namespace MCS\Model;
 
-class MWSProduct
+class Product
 {
     public $sku;
     public $price;
@@ -96,7 +96,7 @@ class MWSProduct
         }
 
         if (!in_array($this->condition_type, $this->conditions)) {
-            $this->validation_errors['condition_type'] = 'Not one of: ' . implode($this->conditions, ',');
+            $this->validation_errors['condition_type'] = 'Not one of: ' . implode(',', $this->conditions);
         }
 
         if ($this->condition_type != 'New') {

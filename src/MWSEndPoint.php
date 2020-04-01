@@ -7,6 +7,8 @@ use Exception;
 class MWSEndPoint
 {
     const FINANCES_API_PATH = '/Finances/2015-05-01';
+    const SUBSCRIPTIONS_API_PATH = '/Subscriptions/2013-07-01';
+    const SHIPMENT_INVOICING_PATH = '/ShipmentInvoicing/2018-09-01';
 
     public static $endpoints = [
         'ListRecommendations' => [
@@ -54,6 +56,12 @@ class MWSEndPoint
         'GetFeedSubmissionResult' => [
             'method' => 'POST',
             'action' => 'GetFeedSubmissionResult',
+            'path' => '/',
+            'date' => '2009-01-01'
+        ],
+        'GetFeedSubmissionList' => [
+            'method' => 'POST',
+            'action' => 'GetFeedSubmissionList',
             'path' => '/',
             'date' => '2009-01-01'
         ],
@@ -165,7 +173,63 @@ class MWSEndPoint
             'action' => 'ListFinancialEventsByNextToken',
             'path' => self::FINANCES_API_PATH,
             'date' => '2015-05-01'
-        ]
+		],
+		/** Subscriptions API section **/
+		'RegisterDestination' => [
+			'method' => 'POST',
+			'action' => 'RegisterDestination',
+			'path' => self::SUBSCRIPTIONS_API_PATH,
+			'date' => '2013-07-01'
+		],
+		'CreateSubscription' => [
+			'method' => 'POST',
+			'action' => 'CreateSubscription',
+			'path' => self::SUBSCRIPTIONS_API_PATH,
+			'date' => '2013-07-01'
+		],
+		'DeleteSubscription' => [
+			'method' => 'POST',
+			'action' => 'DeleteSubscription',
+			'path' => self::SUBSCRIPTIONS_API_PATH,
+			'date' => '2013-07-01'
+		],
+		'ListRegisteredDestinations' => [
+			'method' => 'POST',
+			'action' => 'ListRegisteredDestinations',
+			'path' => self::SUBSCRIPTIONS_API_PATH,
+			'date' => '2013-07-01'
+		],
+		'ListSubscriptions' => [
+			'method' => 'POST',
+			'action' => 'ListSubscriptions',
+			'path' => self::SUBSCRIPTIONS_API_PATH,
+			'date' => '2013-07-01'
+		],
+		'SendTestNotificationToDestination' => [
+			'method' => 'POST',
+			'action' => 'SendTestNotificationToDestination',
+			'path' => self::SUBSCRIPTIONS_API_PATH,
+			'date' => '2013-07-01'
+		],
+		/** Shipment Invoincing API section **/
+		'GetFBAOutboundShipmentDetail' => [
+			'method' => 'POST',
+			'action' => 'GetFBAOutboundShipmentDetail',
+			'path' => self::SHIPMENT_INVOICING_PATH,
+			'date' => '2018-09-01'
+		],
+		'SubmitFBAOutboundShipmentInvoice' => [
+			'method' => 'POST',
+			'action' => 'SubmitFBAOutboundShipmentInvoice',
+			'path' => self::SHIPMENT_INVOICING_PATH,
+			'date' => '2018-09-01'
+		],
+		'GetFBAOutboundShipmentInvoiceStatus' => [
+			'method' => 'POST',
+			'action' => 'GetFBAOutboundShipmentInvoiceStatus',
+			'path' => self::SHIPMENT_INVOICING_PATH,
+			'date' => '2018-09-01'
+		]
     ];
 
     public static function get($key)
