@@ -978,10 +978,14 @@ class MWSClient
             'Merchant' => $this->config['Seller_Id'],
             'MarketplaceId.Id.1' => false,
             'SellerId' => false,
-        ];
-        //if ($FeedType === '_POST_PRODUCT_PRICING_DATA_') {
-        $query['MarketplaceIdList.Id.1'] = $this->config['Marketplace_Id'];
-        //}
+		];
+
+		$setMarketplaceId = isset($options["setMarketplaceId"]) ? $options["setMarketplaceId"] : true;
+
+		if ($setMarketplaceId) {
+			$query['MarketplaceIdList.Id.1'] = $this->config['Marketplace_Id'];
+		}
+
         $response = $this->request(
             'SubmitFeed',
             $query,
