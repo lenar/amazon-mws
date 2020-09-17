@@ -979,10 +979,14 @@ class MWSClient
             'Merchant' => $this->config['Seller_Id'],
             'MarketplaceId.Id.1' => false,
             'SellerId' => false,
-        ];
-        //if ($FeedType === '_POST_PRODUCT_PRICING_DATA_') {
-        $query['MarketplaceIdList.Id.1'] = $this->config['Marketplace_Id'];
-        //}
+		];
+
+		$setMarketplaceId = isset($options["setMarketplaceId"]) ? $options["setMarketplaceId"] : true;
+
+		if ($setMarketplaceId) {
+			$query['MarketplaceIdList.Id.1'] = $this->config['Marketplace_Id'];
+		}
+
         $response = $this->request(
             'SubmitFeed',
             $query,
@@ -1631,7 +1635,7 @@ class MWSClient
             ];
             if (in_array($endPoint['action'], ['SubmitFeed', 'SubmitFBAOutboundShipmentInvoice'])) {
                 $headers['Content-MD5'] = base64_encode(md5($body, true));
-                if (in_array($this->config['Marketplace_Id'], ['AAHKV2X7AFYLW', 'A1VC38T7YXB528'])) {
+                if (in_array($this->config['Marketplace_Id'], ['AAHKV2X7AFYLW', 'A1VC38T7YXB528', 'A2Q3Y263D00KWC'])) {
                     $headers['Content-Type'] = 'text/xml; charset=UTF-8';
                 } else {
                     $headers['Content-Type'] = 'text/xml; charset=iso-8859-16';
