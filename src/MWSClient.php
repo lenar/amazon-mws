@@ -9,6 +9,7 @@ use GuzzleHttp\Exception\BadResponseException;
 use League\Csv\CharsetConverter;
 use League\Csv\Reader;
 use League\Csv\Writer;
+use MCS\Exception\MWSException;
 use MCS\Model\Destination;
 use MCS\Model\Subscription;
 use Spatie\ArrayToXml\ArrayToXml;
@@ -1694,11 +1695,14 @@ class MWSClient
                 if (strpos($message, '<ErrorResponse') !== false) {
                     $error = simplexml_load_string($message);
                     $message = $error->Error->Message;
+                    $code = $error->Error->Code;
                 }
             } else {
-                $message = 'An error occured';
-            }
-            throw new Exception($message);
+				$message = 'An error occured';
+				$code = "";
+			}
+
+			throw new MWSException($message, $code);
         }
     }
 
