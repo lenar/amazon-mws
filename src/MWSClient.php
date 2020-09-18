@@ -45,7 +45,8 @@ class MWSClient
         'A2Q3Y263D00KWC' => 'mws.amazonservices.com'
     ];
     protected $debugNextFeed = false;
-    protected $client = null;
+	protected $client = null;
+	protected $lastRequestResponse = null;
 
     public function __construct(array $config)
     {
@@ -1604,6 +1605,7 @@ class MWSClient
      */
     protected function request($endPoint, array $query = [], $body = null, $raw = false)
     {
+		$this->lastRequestResponse = null;
         $endPoint = MWSEndPoint::get($endPoint);
         $merge = [
             'Timestamp' => gmdate(self::DATE_FORMAT, time()),
@@ -1681,7 +1683,10 @@ class MWSClient
                 $endPoint['method'],
                 $this->config['Region_Url'] . $endPoint['path'],
                 $requestOptions
-            );
+			);
+
+			$this->lastRequestResponse = $response;
+
             $body = (string)$response->getBody();
             if ($raw) {
                 return $body;
@@ -1694,7 +1699,10 @@ class MWSClient
             }
         } catch (BadResponseException $e) {
             if ($e->hasResponse()) {
-                $message = $e->getResponse();
+				$message = $e->getResponse();
+
+				$this->lastRequestResponse = $message;
+
                 $message = $message->getBody();
                 if (strpos($message, '<ErrorResponse') !== false) {
                     $error = simplexml_load_string($message);
@@ -1708,7 +1716,11 @@ class MWSClient
 
 			throw new MWSException($message, $code);
         }
-    }
+	}
+
+	public function getLastRequestResponse() {
+		return $this->lastRequestResponse;
+	}
 
     public function setClient(Client $client)
     {
