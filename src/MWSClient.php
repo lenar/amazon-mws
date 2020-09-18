@@ -1706,8 +1706,8 @@ class MWSClient
                 $message = $message->getBody();
                 if (strpos($message, '<ErrorResponse') !== false) {
                     $error = simplexml_load_string($message);
-                    $message = $error->Error->Message;
-                    $code = $error->Error->Code;
+                    $message = (string) $error->Error->Message;
+                    $code = (string) $error->Error->Code;
                 }
             } else {
 				$message = 'An error occured';
