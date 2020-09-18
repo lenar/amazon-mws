@@ -2,7 +2,7 @@
 
 namespace MCS\Exception;
 
-class MWSException extends Exception {
+class MWSException extends \Exception {
 
 	private $errorCode;
 
