@@ -9,6 +9,7 @@ use GuzzleHttp\Exception\BadResponseException;
 use League\Csv\CharsetConverter;
 use League\Csv\Reader;
 use League\Csv\Writer;
+use MCS\Exception\MWSException;
 use MCS\Model\Destination;
 use MCS\Model\Subscription;
 use Spatie\ArrayToXml\ArrayToXml;
@@ -50,7 +51,8 @@ class MWSClient
         'A2VIGQ35RCS4UG' => 'mws.amazonservices.ae'
     ];
     protected $debugNextFeed = false;
-    protected $client = null;
+	protected $client = null;
+	protected $lastRequestResponse = null;
 
     public function __construct(array $config)
     {
@@ -984,10 +986,14 @@ class MWSClient
             'Merchant' => $this->config['Seller_Id'],
             'MarketplaceId.Id.1' => false,
             'SellerId' => false,
-        ];
-        //if ($FeedType === '_POST_PRODUCT_PRICING_DATA_') {
-        $query['MarketplaceIdList.Id.1'] = $this->config['Marketplace_Id'];
-        //}
+		];
+
+		$setMarketplaceId = isset($options["setMarketplaceId"]) ? $options["setMarketplaceId"] : true;
+
+		if ($setMarketplaceId) {
+			$query['MarketplaceIdList.Id.1'] = $this->config['Marketplace_Id'];
+		}
+
         $response = $this->request(
             'SubmitFeed',
             $query,
@@ -1605,6 +1611,7 @@ class MWSClient
      */
     protected function request($endPoint, array $query = [], $body = null, $raw = false)
     {
+		$this->lastRequestResponse = null;
         $endPoint = MWSEndPoint::get($endPoint);
         $merge = [
             'Timestamp' => gmdate(self::DATE_FORMAT, time()),
@@ -1636,7 +1643,7 @@ class MWSClient
             ];
             if (in_array($endPoint['action'], ['SubmitFeed', 'SubmitFBAOutboundShipmentInvoice'])) {
                 $headers['Content-MD5'] = base64_encode(md5($body, true));
-                if (in_array($this->config['Marketplace_Id'], ['AAHKV2X7AFYLW', 'A1VC38T7YXB528'])) {
+                if (in_array($this->config['Marketplace_Id'], ['AAHKV2X7AFYLW', 'A1VC38T7YXB528', 'A2Q3Y263D00KWC'])) {
                     $headers['Content-Type'] = 'text/xml; charset=UTF-8';
                 } else {
                     $headers['Content-Type'] = 'text/xml; charset=iso-8859-16';
@@ -1682,7 +1689,10 @@ class MWSClient
                 $endPoint['method'],
                 $this->config['Region_Url'] . $endPoint['path'],
                 $requestOptions
-            );
+			);
+
+			$this->lastRequestResponse = $response;
+
             $body = (string)$response->getBody();
             if ($raw) {
                 return $body;
@@ -1695,18 +1705,28 @@ class MWSClient
             }
         } catch (BadResponseException $e) {
             if ($e->hasResponse()) {
-                $message = $e->getResponse();
+				$message = $e->getResponse();
+
+				$this->lastRequestResponse = $message;
+
                 $message = $message->getBody();
                 if (strpos($message, '<ErrorResponse') !== false) {
                     $error = simplexml_load_string($message);
-                    $message = $error->Error->Message;
+                    $message = (string) $error->Error->Message;
+                    $code = (string) $error->Error->Code;
                 }
             } else {
-                $message = 'An error occured';
-            }
-            throw new Exception($message);
+				$message = 'An error occured';
+				$code = "";
+			}
+
+			throw new MWSException($message, $code);
         }
-    }
+	}
+
+	public function getLastRequestResponse() {
+		return $this->lastRequestResponse;
+	}
 
     public function setClient(Client $client)
     {
