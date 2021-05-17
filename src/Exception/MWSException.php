@@ -2,18 +2,19 @@
 
 namespace MCS\Exception;
 
-class MWSException extends \Exception {
+class MWSException extends \Exception 
+{
+    private $errorCode;
 
-	private $errorCode;
+    public function __construct(string $message = "", $errorCode = '', \Throwable $previous = null)
+    {
+        $this->errorCode = $errorCode;
 
-	public function __construct($message, $errorCode = "") {
-		$this->errorCode = $errorCode;
+        parent::__construct($message, (int) $errorCode, $previous);
+    }
 
-		parent::__construct($message);
-	}
-
-	public function getErrorCode() {
-		return $this->errorCode;
-	}
-
+    public function getErrorCode()
+    {
+        return $this->errorCode;
+    }
 }

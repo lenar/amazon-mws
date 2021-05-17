@@ -707,7 +707,7 @@ class MWSClient
      * @throws Exception
      * @throws \GuzzleHttp\Exception\GuzzleException
      */
-    public function GetReportList($ReportTypeList = [])
+    public function GetReportList($ReportTypeList = [], $MaxCount = null, bool $Acknowledged = null, DateTime $AvailableFromDate = null)
     {
         $array = [];
         $counter = 1;
@@ -717,6 +717,19 @@ class MWSClient
                 $counter++;
             }
         }
+
+        if ($MaxCount > 0) {
+            $array['MaxCount'] = $MaxCount;
+        }
+
+        if (null !== $Acknowledged) {
+            $array['Acknowledged'] = $Acknowledged ? 'true' : 'false';
+        }
+
+        if (null !== $AvailableFromDate) {
+            $array['AvailableFromDate'] = gmdate(self::DATE_FORMAT, $AvailableFromDate->getTimestamp());
+        }
+
         return $this->request('GetReportList', $array);
     }
 
@@ -1064,13 +1077,45 @@ class MWSClient
     }
 
     /**
+     * Acknowledges reports
+     * @param array $id_array
+     * @param bool $Acknowledged
+     * @return array $reportInfo
+     * @throws Exception
+     * @throws \GuzzleHttp\Exception\GuzzleException
+     */
+    public function UpdateReportAcknowledgements(array $id_array, bool $Acknowledged)
+    {
+        $query = [
+            'Acknowledged' => $Acknowledged ? 'true' : 'false',
+        ];
+
+        $counter = 1;
+        foreach ($id_array as $id) {
+            $query['ReportIdList.Id.' . $counter] = $id;
+            $counter++;
+        }
+
+        $result = $this->request(
+            'UpdateReportAcknowledgements',
+            $query
+        );
+
+        if (isset($result['UpdateReportAcknowledgementsResult']['ReportInfo'])) {
+            return $result['UpdateReportAcknowledgementsResult']['ReportInfo'];
+        } else {
+            throw new Exception('Error trying to request report');
+        }
+    }
+
+    /**
      * Get a report's content
      * @param string $ReportId
      * @return array|bool on succes
      * @throws Exception
      * @throws \GuzzleHttp\Exception\GuzzleException
      */
-    public function GetReport($ReportId, $requestStatus = true)
+    public function GetReport($ReportId, $requestStatus = true, $raw = false)
     {
 		$status = false;
 
@@ -1084,8 +1129,8 @@ class MWSClient
 		if (!$requestStatus || ($status !== false && $status['ReportProcessingStatus'] === '_DONE_')) {
 			$result = $this->request('GetReport', [
 				'ReportId' => $requestStatus ? $status['GeneratedReportId'] : $ReportId
-			]);
-			if (is_string($result)) {
+			], null, $raw);
+			if (!$raw && is_string($result)) {
 				$content = [];
 
 				$reader = Reader::createFromString($result);
@@ -1376,7 +1421,10 @@ class MWSClient
                 $counter++;
             }
         }
-        $array['MaxCount'] = $limit;
+        if ($limit > 0) {
+            $array['MaxCount'] = $limit;
+        }
+
         return $this->request('GetReportRequestList', $array);
     }
 
@@ -1387,24 +1435,14 @@ class MWSClient
      * @return array
      * @throws \GuzzleHttp\Exception\GuzzleException
      */
-    public function GetReportListByNextToken($ReportTypeList = [], $nextToken = null, $limit = null)
+    public function GetReportListByNextToken($nextToken)
     {
         $array = [];
-        $counter = 1;
-        if (count($ReportTypeList)) {
-            foreach ($ReportTypeList as $ReportType) {
-                $array['ReportTypeList.Type.' . $counter] = $ReportType;
-                $counter++;
-            }
-        }
-        if ($nextToken != null) {
-            $array['NextToken'] = $nextToken;
-        }
-        $array['MaxCount'] = $limit;
+        $array['NextToken'] = $nextToken;
         return $this->request('GetReportListByNextToken', $array);
-	}
+    }
 
-	/**
+    /**
      * Specifies a new destination where you want to receive notifications.
      * @param MCS\Model\Destination $destination
      * @return array
@@ -1506,6 +1544,7 @@ class MWSClient
 			return $response['ListSubscriptionsResult']["SubscriptionList"]["member"];
 		}
 	}
+
 
 	/**
      * Sends a test notification to an existing destination.
@@ -1705,9 +1744,9 @@ class MWSClient
             }
         } catch (BadResponseException $e) {
             if ($e->hasResponse()) {
-				$message = $e->getResponse();
-
-				$this->lastRequestResponse = $message;
+                $message = $e->getResponse();
+                $code = '';
+                $this->lastRequestResponse = $message;
 
                 $message = $message->getBody();
                 if (strpos($message, '<ErrorResponse') !== false) {
@@ -1716,17 +1755,18 @@ class MWSClient
                     $code = (string) $error->Error->Code;
                 }
             } else {
-				$message = 'An error occured';
-				$code = "";
-			}
+                $message = 'An error occured';
+	        $code = '';
+            }
 
-			throw new MWSException($message, $code);
+            throw new MWSException($message, $code, $e);
         }
-	}
+    }
 
-	public function getLastRequestResponse() {
-		return $this->lastRequestResponse;
-	}
+    public function getLastRequestResponse()
+    {
+        return $this->lastRequestResponse;
+    }
 
     public function setClient(Client $client)
     {
